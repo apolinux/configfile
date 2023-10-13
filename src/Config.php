@@ -5,8 +5,6 @@ namespace Apolinux;
 /**
  * Manage configuration read from array dictionary contained in file
  *
- * manage developer and production options
- *
  * @author Carlos Arce <apolinux@gmail.com>
  */
 class Config {
@@ -40,24 +38,46 @@ class Config {
     }
 
     /**
-     * get the item from file
-     * The format of item is  "filealias.item1.item2..."
-     * filealias is the name of file in "config" directory without .php extension
+     * Get the item from configuration file
+     * 
+     * Get a key in a anidated or simple array returned in existent configuration file
+     * 
+     * The file contains an array that must be returned, for example:
+     * 
+     * // file called config.php 
+     * <?php 
+     * 
+     * return [
+     *   'item1' => 'value1' ,
+     *   'item2' => [
+     *     'item3 => 'value2',
+     *    ],
+     *  ..
+     * ];
+     * 
+     * To get value of item3 for example get() must be called like this:
+     * 
+     * $result = Config::get('config.item2.item3');
+     * 
+     * because config is the filename without .php extension
      *
-     * @param string $item item like this "filealias.item1.item2..."
-     * @param mixed $default default value used if item not exist
-     * @return mixed
-     * @throws \Exception
+     * @param string $item key to find in array in a format like this "filealias.item1.item2..."
+     * @param mixed $default default value used if item not exist. If is null and key is not found, throws error
+     * @return mixed the value found
+     * @throws ConfigException
+     * @throws FileNotFoundException
+     * @throws InvalidKeyException
      */
     public static function get($item,$default=null)
     {
         if(empty($item)){
-            throw new \Exception('The item is empty') ;
+            throw new ConfigException('The item is empty') ;
         }
 
         $fields = explode('.',$item) ;
         if(count($fields) < 2){
-            throw new \Exception('The item "'. $item .'" must have at last two fields separated by dot(.)') ;
+            throw new ConfigException('The item "'. $item .
+             '" must have at last two fields separated by dot(.)') ;
         }
         $config_name = array_shift($fields) ;
 
@@ -67,7 +87,9 @@ class Config {
 			if(file_exists($filename) and is_readable($filename)){
 				$config = require($filename);
 			}else{
-				throw new FileNotFoundException('The configuration file "' . $filename .'" for item "'. $item .'" does not exists') ;
+				throw new FileNotFoundException(
+                    'The configuration file "' . $filename .'"'. 
+                    ' for item "'. $item .'" does not exist') ;
 			}
             self::$file_list[$filename] = $config ;
 		}else{
@@ -87,9 +109,12 @@ class Config {
     }
 
     /**
+     * Read key from array recursely
+     * 
      * read item from array defined from config string as "item1.item2.item3..."
      * this is read from an array defined like this:
      * $item = [ ... 'item1' => [ ... 'item2' => [ ... 'item3' => 'value' ... ] ... ] ... ]
+     * 
      * @param array $config_array
      * @param array $item_list list of items required to read
      * @param string $item items in string separated by dot format
@@ -102,7 +127,8 @@ class Config {
         $value = $config_array ;
         foreach($item_list as $item1){
             if(! isset($value[$item1])){
-                throw new InvalidKeyException('The key "' . $item1 . '" not exist in array, item:'.$item.', file: '.$filename) ;
+                throw new InvalidKeyException('The key "' . $item1 . '"' .
+                ' not exist in array, item:'.$item.', file: '.$filename) ;
             }
             $value = $value[$item1] ;
         }
@@ -111,30 +137,34 @@ class Config {
     }
 
     /**
-     * validate that item exists in config file
+     * validate that key exists in config file
+     * 
      * @param string $item
      * @return boolean
-     * @throws \Config\InvalidKeyException
+     * @throws InvalidKeyException
      */
     public static function itemExist($item){
         try{
-            $val = self::get($item);
-        }catch(\Exception $e){
-            if(is_a($e, InvalidKeyException::class)){
-                return false ;
-            }
-            throw $e ;
+            self::get($item);
+        }catch(InvalidKeyException $e){
+            return false ;
         }
         return true ;
     }
 
     /**
-     * like get method, but replaces wildards like %item% with value obtained in config:
-     * 'config.item' inside value. example:
-     * Config::get('config.testwc') returns '%init%/some'
+     * Get item replacing wildcards
+     * 
+     * Get item like get() method, but replaces wildards inside value returned 
+     * enclosed with '%' like '%item%' with the value obtained in 
+     * anther get operation using this wildcard.
+     * 
+     * Example:
+     * if Config::get('config.testwc') returns '%init%/some'
      * then getReplaced search for Config::get('config.init') and replaces in '%init%'
-     * @param string $item
-     * @param mixed $default
+     * 
+     * @param string $item item to search
+     * @param mixed $default default value if not found
      * @return mixed
      */
     public static function getReplaced($item,$default=null){
@@ -146,12 +176,11 @@ class Config {
     }
 
     /**
-     * convert an indexed array like 'a' => 'b' obtained from config
-     * to form 'a:b'.
-     *
-     * used for curl user password configuration options
-     * @param string $item
-     * @param int $index
+     * Group key and value in same text
+     * 
+     * Convert an indexed array like [ 'a' => 'b' ] to form 'a:b'.
+     * @param string $item item to find
+     * @param int $index index of array
      * @return string
      */
     public static function getToUserPwd($item, $index=0){
@@ -169,21 +198,26 @@ class Config {
     }
 
     /**
-     * Set a value on a item on specified config file. This works only in memory, not is file persistent.
+     * Set item in memory config
+     * 
+     * Set a value on a item on specified config file. 
+     * This works only in memory, not is file persistent.
+     * 
      * @param string $item
      * @param mixed $value
      * @return type
-     * @throws \Exception
+     * @throws ConfigException
      */
     public static function set($item, $value)
     {
       if(empty($item)){
-          throw new \Exception('The item is empty') ;
+          throw new ConfigException('The item is empty') ;
       }
 
       $fields = explode('.',$item) ;
       if(count($fields) < 2){
-          throw new \Exception('The item "'. $item .'" must have at last two fields separated by dot(.)') ;
+          throw new ConfigException('The item "'. $item .'"' . 
+          ' must have at last two fields separated by dot(.)') ;
       }
 
       $config_name = array_shift($fields) ;
@@ -194,7 +228,9 @@ class Config {
   			if(file_exists($filename) and is_readable($filename)){
   				$config = require($filename);
   			}else{
-  				throw new FileNotFoundException('The configuration file "' . $filename .'" for item "'. $item .'" does not exists') ;
+  				throw new FileNotFoundException(
+                    'The configuration file "' . $filename .'"' . 
+                    ' for item "'. $item .'" does not exists') ;
   			}
   		}else{
   			$config = self::$file_list[$filename];
@@ -243,7 +279,8 @@ class Config {
 			if(file_exists($filename) and is_readable($filename)){
 				$config = require($filename);
 			}else{
-				throw new FileNotFoundException('The configuration file "' . $filename .' does not exists') ;
+				throw new FileNotFoundException(
+                    'The configuration file "' . $filename .' does not exists') ;
 			}
             self::$file_list[$filename] = $config ;
 		}else{
@@ -259,7 +296,8 @@ class Config {
 
     /**
      * sweep recursely config array
-     * @param string $config
+     * 
+     * @param array $config
      * @param string $parent
      * @return array
      */
@@ -280,9 +318,17 @@ class Config {
         return $out ;
     }
 
+    /**
+     * get all items in config file
+     * 
+     * @param string $item config name without extension
+     * @throws ConfigException 
+     * @throws FileNotFoundException
+     * @return array
+     */
     public static function getAll($item){
         if(empty($item)){
-            throw new \Exception('The item is empty') ;
+            throw new ConfigException('The item is empty') ;
         }
 
         $filename = self::$basedir . "/$item.php" ;

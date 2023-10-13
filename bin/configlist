@@ -1,0 +1,58 @@
+#!/bin/env php
+<?php
+(php_sapi_name() === 'cli') || die('This script only run in CLI'.PHP_EOL);
+
+use Apolinux\Config;
+use Apolinux\FileNotFoundException;
+
+$dir = __DIR__.'/..';
+
+if (!file_exists($dir.'/autoload.php')) {
+    $dir = __DIR__.'/../vendor';
+}
+
+if (!file_exists($dir.'/autoload.php')) {
+    $dir = __DIR__.'/../../..';
+}
+
+if (!file_exists($dir.'/autoload.php')) {
+    echo 'Autoload not found.';
+    exit(1);
+}
+
+include $dir.'/autoload.php';
+
+function getMessage(){
+  global $argv ;
+  $prog = basename($argv[0]);
+  echo "List configuration files in lineal form like:".
+  "itema.itemb.itemc => value\n".
+  "Usage $prog <base_dir> <config_file>\n" .
+    "Where \n" .
+    "base_dir   : optional. base directory where to find for configuration files, " .
+    "default directory is current.\n" .
+    "config_file: optional. write configuration file name without php, example: config \n";
+}
+
+
+if ($argc < 1 ||
+   ( isset($argv[1]) && in_array($argv[1], ['-h', '--help']) )
+   ) {
+  getMessage();
+    exit(1);
+}
+
+$base_dir = $argv[1] ?? getcwd();
+$config_name = $argv[2] ?? 'config' ;
+
+Config::init($base_dir) ;
+try{
+$out = Config::sweep($config_name);
+}catch(FileNotFoundException $e){
+  getMessage() ;
+  echo "Error: ".$e->getMessage() ."\n";
+  exit(1) ;
+}
+foreach( $out as $item => $value){
+    echo "$item => $value\n";
+}
