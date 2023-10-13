@@ -1,0 +1,21 @@
+{
+    "name": "apolinux/config",
+    "authors": [
+        {
+            "name": "Carlos Arce",
+            "email": "apolinux@gmail.com"
+        }
+    ],
+    "description": "Manage configurations using dot route",
+    "type": "library",
+    "autoload": {
+        "psr-4": { "Apolinux\\": "src/" }
+    },
+    "license": "MIT",
+    "require-dev": {
+        "phpunit/phpunit":">=9.0"
+    },
+    "require": {
+        "php":">7.4"
+    }
+}
