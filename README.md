@@ -87,3 +87,18 @@ another get operation using this wildcard.
 Example:
 If Config::get('config.testwc') returns '%init%/some'
 then getReplaced search for the value of Config::get('config.init') and replaces it in '%init%'
+
+### configlist
+
+configlist is a script than shows all the configurations from config file an item by line. 
+Is installed in directory vendor/bin.
+
+```
+configlist --help
+List configuration files in lineal form like:itema.itemb.itemc => value
+Usage configlist <base_dir> <config_file>
+Where 
+base_dir   : optional. base directory where to find for configuration files, default directory is current.
+config_file: optional. write configuration file name without php, example: config 
+
+```
